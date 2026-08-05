@@ -602,12 +602,6 @@ Example Response
 
 ---
 
-# License
-
-This project is licensed under the MIT License.
-
----
-
 # Maintained By
 
 **Hamara Adhikar**
