@@ -8,6 +8,8 @@ const schemeRoutes = require("./routes/scheme.routes");
 const categoryRoutes = require("./routes/category.routes");
 const departmentRoutes = require("./routes/department.routes");
 const searchRoutes = require("./routes/search.routes");
+const eligibilityRoutes = require("./routes/eligibility.routes");
+const recommendationRoutes = require("./routes/recommendation.routes");
 
 const app = express();
 
@@ -21,5 +23,7 @@ app.use("/api/schemes", schemeRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/eligibility", eligibilityRoutes);
+app.use("/api/recommendations", recommendationRoutes);
 
 module.exports = app;
