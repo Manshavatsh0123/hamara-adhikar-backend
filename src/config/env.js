@@ -11,5 +11,7 @@ module.exports = {
 
     DB_PASSWORD: process.env.DB_PASSWORD,
 
-    DB_NAME: process.env.DB_NAME
+    DB_NAME: process.env.DB_NAME,
+
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY
 };
