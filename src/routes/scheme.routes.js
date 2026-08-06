@@ -6,4 +6,6 @@ const router = express.Router();
 
 router.get("/", schemeController.getAllSchemes);
 
+router.get("/:id", schemeController.getSchemeById);
+
 module.exports = router;
