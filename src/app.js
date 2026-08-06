@@ -4,6 +4,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 
 const healthRoutes = require("./routes/health.routes");
+const schemeRoutes = require("./routes/scheme.routes");
 
 const app = express();
 
@@ -13,5 +14,6 @@ app.use(morgan("dev"));
 app.use(express.json());
 
 app.use("/api/health", healthRoutes);
+app.use("/api/schemes", schemeRoutes);
 
 module.exports = app;
