@@ -7,6 +7,7 @@ const healthRoutes = require("./routes/health.routes");
 const schemeRoutes = require("./routes/scheme.routes");
 const categoryRoutes = require("./routes/category.routes");
 const departmentRoutes = require("./routes/department.routes");
+const searchRoutes = require("./routes/search.routes");
 
 const app = express();
 
@@ -19,5 +20,6 @@ app.use("/api/health", healthRoutes);
 app.use("/api/schemes", schemeRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/departments", departmentRoutes);
+app.use("/api/search", searchRoutes);
 
 module.exports = app;
