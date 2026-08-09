@@ -2,25 +2,33 @@ const eligibilityRepository = require("../repositories/eligibility.repository");
 
 // Helper function to check if a user's value exists in a PostgreSQL TEXT[] column
 const matchesArray = (dbValues, userValue) => {
+
     if (!dbValues || dbValues.length === 0) {
         return true;
     }
 
-    return dbValues
-        .map(value => value.toLowerCase())
-        .includes(userValue.toLowerCase());
+    if (!userValue) {
+        return false;
+    }
+
+    return dbValues.some(
+        value =>
+            value.toLowerCase() === userValue.toLowerCase()
+    );
 };
 
 const checkEligibility = async (userData) => {
 
-    const rule = await eligibilityRepository.findRule(userData.schemeId);
+    const rule = await eligibilityRepository.findRuleWithScheme(userData.schemeId);
+
+    console.log("USER DATA:", userData);
+    console.log("DB RULE:", rule);
 
     if (!rule) {
         throw new Error("Eligibility rules not found");
     }
 
     let eligible = true;
-
     const reasons = [];
 
     // Age
@@ -77,9 +85,29 @@ const checkEligibility = async (userData) => {
         reasons.push("Disability criteria not satisfied");
     }
 
+    console.log("ELIGIBLE:", eligible);
+    console.log("REASONS:", reasons);
+
     return {
         eligible,
-        reasons
+
+        message: eligible
+            ? "You are eligible for this scheme."
+            : "You are not eligible for this scheme.",
+
+        reasons,
+
+        nextStep: eligible
+            ? "You can proceed with the application."
+            : "Please review the eligibility requirements and explore other schemes.",
+
+        scheme: {
+            id: rule.scheme_id,
+            name: rule.scheme_name,
+            department: rule.department,
+            state: rule.scheme_state,
+            description: rule.description
+        }
     };
 };
 
