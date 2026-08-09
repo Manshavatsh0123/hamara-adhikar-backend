@@ -1075,6 +1075,179 @@ http://localhost:5000
 
 ---
 
+# 20. Middleware
+
+The backend uses middleware for validation, rate limiting, 404 handling, and centralized error handling.
+
+Current structure:
+
+```text
+src/middleware/
+├── error.middleware.js
+├── notFound.middleware.js
+├── rateLimit.middleware.js
+└── validate.middleware.js
+```
+
+## 20.1 `validate.middleware.js`
+
+Validates request data before it reaches the controller.
+
+```text
+Request
+  ↓
+Validation
+  ↓
+Valid?
+  ├── No  → 400 Bad Request
+  └── Yes → Controller
+```
+
+Use it for endpoints such as:
+
+```text
+POST /api/ai/chat
+POST /api/recommendations
+POST /api/eligibility
+```
+
+Important fields to validate include `message`, `schemeId`, `age`, `gender`, `state`, `occupation`, `income`, `caste`, and `disability`. Validation keeps invalid data out of the service and repository layers.
+
+---
+
+## 20.2 `notFound.middleware.js`
+
+Handles requests for routes that do not exist.
+
+Example:
+
+```text
+GET /api/unknown
+```
+
+Recommended response:
+
+```json
+{
+  "success": false,
+  "message": "Route not found"
+}
+```
+
+Register this middleware after all valid API routes.
+
+---
+
+## 20.3 `rateLimit.middleware.js`
+
+Protects public endpoints from excessive repeated requests. It is especially useful for:
+
+```text
+POST /api/ai/chat
+POST /api/recommendations
+POST /api/eligibility
+```
+
+Flow:
+
+```text
+Request
+  ↓
+Rate limiter
+  ↓
+Within allowed limit?
+  ├── Yes → Continue
+  └── No  → 429 Too Many Requests
+```
+
+Keep rate-limit configuration centralized instead of duplicating limits inside controllers.
+
+---
+
+## 20.4 `error.middleware.js`
+
+Provides centralized handling for unexpected errors.
+
+Flow:
+
+```text
+Route
+  ↓
+Controller
+  ↓
+Service
+  ↓
+Repository
+  ↓
+Error
+  ↓
+error.middleware.js
+  ↓
+Standard JSON response
+```
+
+Recommended response format:
+
+```json
+{
+  "success": false,
+  "message": "Something went wrong"
+}
+```
+
+The actual error can be logged on the server during development. Production responses should not expose stack traces, SQL queries, API keys, or other internal details.
+
+---
+
+## 20.5 Middleware Order in `app.js`
+
+Middleware order is important. The recommended high-level order is:
+
+```text
+1. Express/configuration
+2. CORS/security middleware
+3. JSON body parser
+4. Rate limiter
+5. API routes
+6. notFound middleware
+7. error middleware
+```
+
+Conceptually:
+
+```js
+app.use(express.json());
+
+app.use(rateLimiter);
+
+app.use("/api/health", healthRoutes);
+app.use("/api/schemes", schemeRoutes);
+app.use("/api/search", searchRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/departments", departmentRoutes);
+app.use("/api/recommendations", recommendationRoutes);
+app.use("/api/eligibility", eligibilityRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/schemes", applicationRoutes);
+
+app.use(notFound);
+app.use(errorHandler);
+```
+
+For request validation, apply the appropriate validator to the specific route:
+
+```text
+POST /api/eligibility
+        ↓
+validate
+        ↓
+eligibilityController
+```
+
+Do not use one unrelated validation schema for every endpoint.
+
+---
+
 # 20. Environment Variables
 
 Keep secrets in `.env`.
