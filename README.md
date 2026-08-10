@@ -1,167 +1,117 @@
-# Hamara Adhikar — Backend API
+# Hamara Adhikar --- Backend API {#hamara-adhikar--backend-api}
 
-Backend service for **Hamara Adhikar**, an AI-assisted government-scheme discovery and eligibility platform.
+Backend service for **Hamara Adhikar**, an AI-assisted government-scheme
+discovery, recommendation, eligibility and application-guidance
+platform.
 
-The backend is responsible for:
+## 1. Complete User Flow {#1-complete-user-flow}
 
-- Government scheme retrieval
-- Search and suggestions
-- Category and department filtering
-- AI-based natural-language scheme discovery
-- Scheme recommendations
-- Eligibility checking
-- Eligibility reasons and next steps
-- Application information
-- Required documents
-- Official source/application links
-
-> This README describes the backend flow and structure based on the current implementation, database structure, API testing, and the working endpoints in the project.
-
----
-
-## 1. Overall System Flow
-
-The main user journey is:
-
-```text
+``` text
 User
-  |
-  | Natural-language question
-  v
+  ↓
 POST /api/ai/chat
-  |
-  v
-PostgreSQL scheme search
-  |
-  v
+  ↓
+PostgreSQL scheme retrieval
+  ↓
 Relevant schemes
-  |
-  v
-Gemini AI explanation
-  |
-  v
-User sees recommended/relevant schemes
-  |
-  | User selects a scheme
-  v
+  ↓
+Gemini explanation
+  ↓
+POST /api/recommendations
+  ↓
+User selects a scheme
+  ↓
 POST /api/eligibility
-  |
-  v
-Eligibility Controller
-  |
-  v
-Eligibility Service
-  |
-  v
-eligibility_rules table
-  |
-  v
-Eligibility Result
-  |
-  +----------------------+
-  |                      |
-  v                      v
-Eligible              Not Eligible
-  |                      |
-  |                      +--> reasons
-  |                      |
-  +--> next step         +--> explore other schemes
-  |
-  v
-GET /api/schemes/:id/application
-  |
-  v
-scheme_content
-  |
-  +--> application process
-  +--> required documents
-  +--> official source
-  +--> apply link / status link
-```
-
----
-
-# 2. Backend Architecture
-
-The backend follows a layered architecture:
-
-```text
-Routes
-  ↓
-Controllers
-  ↓
-Services
-  ↓
-Repositories
-  ↓
-PostgreSQL
-```
-
-For AI:
-
-```text
-AI Route
-  ↓
-AI Controller
-  ↓
-AI Service
-  ↓
-AI Repository
-  ↓
-PostgreSQL
-  ↓
-Relevant schemes
-  ↓
-Gemini
-  ↓
-AI response
-```
-
-For eligibility:
-
-```text
-Eligibility Route
-  ↓
-Eligibility Controller
-  ↓
-Eligibility Service
-  ↓
-Eligibility Repository
   ↓
 eligibility_rules
   ↓
-Eligibility Result
-```
-
-For application information:
-
-```text
-Application Route
+Eligible / Not Eligible + reasons
   ↓
-Application Controller
-  ↓
-Application Repository
+GET /api/schemes/:id/application
   ↓
 scheme_content
   ↓
-Application Information
+Application steps + documents + official links
 ```
 
----
+## 2. Backend Architecture {#2-backend-architecture}
 
-# 3. Project Structure
+``` text
+Client / Frontend
+      ↓
+Express API
+      ↓
+Routes
+      ↓
+Controllers
+      ↓
+Services
+      ↓
+Repositories
+      ↓
+PostgreSQL
+```
 
-Current backend structure:
+AI/RAG:
 
-```text
+``` text
+POST /api/ai/chat
+      ↓
+AI Controller
+      ↓
+AI Service
+      ↓
+AI Repository
+      ↓
+PostgreSQL
+      ↓
+Top matching schemes
+      ↓
+Gemini
+      ↓
+Grounded response
+```
+
+Eligibility:
+
+``` text
+POST /api/eligibility
+      ↓
+Eligibility Controller
+      ↓
+Eligibility Service
+      ↓
+Eligibility Repository
+      ↓
+eligibility_rules
+      ↓
+Compare age/gender/state/occupation/income/caste/disability
+      ↓
+Result + reasons
+```
+
+Application:
+
+``` text
+GET /api/schemes/:id/application
+      ↓
+Application Controller
+      ↓
+Application Service
+      ↓
+Application Repository
+      ↓
+scheme_content
+```
+
+## 3. Project Structure {#3-project-structure}
+
+``` text
 hamara-adhikar-backend/
-│
 ├── src/
-│   │
 │   ├── config/
 │   │   ├── db.js
 │   │   └── env.js
-│   │
 │   ├── controllers/
 │   │   ├── ai.controller.js
 │   │   ├── application.controller.js
@@ -172,7 +122,6 @@ hamara-adhikar-backend/
 │   │   ├── recommendation.controller.js
 │   │   ├── scheme.controller.js
 │   │   └── search.controller.js
-│   │
 │   ├── repositories/
 │   │   ├── ai.repository.js
 │   │   ├── application.repository.js
@@ -182,81 +131,34 @@ hamara-adhikar-backend/
 │   │   ├── recommendation.repository.js
 │   │   ├── scheme.repository.js
 │   │   └── search.repository.js
-│   │
 │   ├── routes/
-│   │   ├── ai.routes.js
-│   │   ├── application.routes.js
-│   │   ├── category.routes.js
-│   │   ├── department.routes.js
-│   │   ├── eligibility.routes.js
-│   │   ├── health.routes.js
-│   │   ├── recommendation.routes.js
-│   │   ├── scheme.routes.js
-│   │   └── search.routes.js
-│   │
 │   ├── services/
-│   │   ├── ai.service.js
-│   │   ├── application.service.js
-│   │   ├── category.service.js
-│   │   ├── department.service.js
-│   │   ├── eligibility.service.js
-│   │   ├── health.service.js
-│   │   ├── recommendation.service.js
-│   │   ├── scheme.service.js
-│   │   └── search.service.js
-│   │
 │   ├── validators/
-│   │
 │   ├── middleware/
-│   │
+│   │   ├── error.middleware.js
+│   │   ├── notFound.middleware.js
+│   │   ├── rateLimit.middleware.js
+│   │   └── validate.middleware.js
 │   ├── app.js
 │   └── server.js
-│
 ├── .env
 ├── package.json
-├── package-lock.json
 └── README.md
 ```
 
-### Responsibility of each layer
+## 4. Database Structure {#4-database-structure}
 
-| Layer | Responsibility |
-|---|---|
-| Routes | Define HTTP endpoints |
-| Controllers | Receive request and send response |
-| Services | Business logic |
-| Repositories | PostgreSQL queries |
-| Config | Database/environment configuration |
-| Middleware | Shared request/response handling |
-| Validators | Request validation |
-| `app.js` | Express application configuration |
-| `server.js` | Starts the server |
-
----
-
-# 4. Database Structure
-
-The current database contains these main tables:
-
-```text
+``` text
 schemes
-   |
-   +---- scheme_categories
-   |
-   +---- scheme_tags
-   |
-   +---- scheme_content
-   |
-   +---- eligibility_rules
+   ├── scheme_content
+   ├── eligibility_rules
+   ├── scheme_categories
+   └── scheme_tags
 ```
 
-## 4.1 `schemes`
+### schemes
 
-Core scheme information.
-
-Important fields:
-
-```text
+``` text
 id
 scheme_code
 scheme_name
@@ -265,19 +167,9 @@ state
 description
 ```
 
-This table answers:
+### scheme_content
 
-> "What is this scheme?"
-
----
-
-## 4.2 `scheme_content`
-
-Additional structured information about a scheme.
-
-Current structure includes:
-
-```text
+``` text
 id
 scheme_id
 objectives
@@ -290,394 +182,280 @@ important_notes
 faqs
 ```
 
-This table answers:
+Application information already exists here, so a separate
+`scheme_applications` table is not currently required.
 
-> "What does the scheme provide and how can the user use/apply for it?"
+### eligibility_rules
 
-Important JSONB fields:
-
-```text
-application_process
-documents_required
-official_source
-```
-
-Example application data already present:
-
-```json
-{
-  "mode": "Online / Offline",
-  "application_steps": [
-    {
-      "step": 1,
-      "title": "Login",
-      "description": "Log in using the User ID and password."
-    },
-    {
-      "step": 2,
-      "title": "Enter Details",
-      "description": "Fill in personal, educational and other required details."
-    }
-  ]
-}
-```
-
-Required documents are also stored here.
-
-Therefore, **a separate `scheme_applications` table is not currently required** just to expose application information.
-
----
-
-## 4.3 `eligibility_rules`
-
-This table stores the machine-readable eligibility criteria.
-
-Current fields:
-
-```text
+``` text
 id
 scheme_id
 min_age
 max_age
 gender
-state
-occupation
-caste
+state text[]
+occupation text[]
+caste text[]
 income_limit
 disability
 ```
 
-Example:
+The eligibility service dynamically calculates the result. An
+`eligibility_reports` table is not currently required because every
+check does not need to be persisted.
 
-```text
-scheme_id       = 1
-min_age         = 18
-max_age         = 35
-gender          = Female
-state           = {Bihar}
-occupation      = {Student}
-caste           = {General,OBC,SC,ST}
-income_limit    = 300000
-disability      = false
+## 5. ER Diagram {#5-er-diagram}
+
+``` mermaid
+erDiagram
+    SCHEMES {
+        int id PK
+        text scheme_code
+        text scheme_name
+        text department
+        varchar state
+        text description
+    }
+
+    SCHEME_CONTENT {
+        int id PK
+        int scheme_id FK
+        jsonb objectives
+        jsonb benefits
+        jsonb eligibility
+        jsonb application_process
+        jsonb documents_required
+        jsonb official_source
+        jsonb important_notes
+        jsonb faqs
+    }
+
+    ELIGIBILITY_RULES {
+        int id PK
+        int scheme_id FK
+        int min_age
+        int max_age
+        varchar gender
+        text_array state
+        text_array occupation
+        text_array caste
+        bigint income_limit
+        boolean disability
+    }
+
+    SCHEME_CATEGORIES {
+        int id PK
+        int scheme_id FK
+    }
+
+    SCHEME_TAGS {
+        int id PK
+        int scheme_id FK
+    }
+
+    SCHEMES ||--o| SCHEME_CONTENT : has
+    SCHEMES ||--o{ ELIGIBILITY_RULES : has
+    SCHEMES ||--o{ SCHEME_CATEGORIES : belongs_to
+    SCHEMES ||--o{ SCHEME_TAGS : has
 ```
 
-This table answers:
+## 6. API Map {#6-api-map}
 
-> "Is this particular user eligible for this scheme?"
+``` text
+Health
+├── GET /api/health
 
----
+Schemes
+├── GET /api/schemes
+├── GET /api/schemes/:id
+├── GET /api/schemes/code/:code
+└── GET /api/schemes/random
 
-# 5. Why We Do NOT Need `eligibility_reports` Yet
+Categories
+├── GET /api/categories
+└── GET /api/categories/:category
 
-The current eligibility system calculates the result dynamically:
+Departments
+├── GET /api/departments
+└── GET /api/departments/:department
 
-```text
-User data
-   ↓
-eligibility_rules
-   ↓
-Eligibility calculation
-   ↓
-eligible / not eligible
-   ↓
-reasons
+Search
+├── GET /api/search
+└── GET /api/search/suggestions
+
+Eligibility
+└── POST /api/eligibility
+
+Recommendations
+└── POST /api/recommendations
+
+AI
+└── POST /api/ai/chat
+
+Statistics
+└── GET /api/stats
+
+Application
+└── GET /api/schemes/:id/application
+
+States
+└── GET /api/states   [next endpoint]
 ```
 
-Example:
+## 7. Random Schemes API {#7-random-schemes-api}
 
-```json
-{
-  "eligible": false,
-  "message": "You are not eligible for this scheme.",
-  "reasons": [
-    "Age criteria not satisfied",
-    "Gender criteria not satisfied",
-    "State criteria not satisfied"
-  ]
-}
+``` text
+GET /api/schemes/random
 ```
 
-There is no need to save every eligibility check in PostgreSQL unless the product later requires:
+Uses the existing `schemes` table. No separate random table is needed.
 
-- User accounts
-- Eligibility history
-- Saved schemes
-- Application tracking
-- Analytics
-- Admin reports
-- Audit history
-
-For the current product, returning the calculated result is simpler and avoids unnecessary database writes.
-
----
-
-# 6. API Endpoints
-
-Base URL during local development:
-
-```text
-http://localhost:5000
-```
-
----
-
-## 6.1 Health
-
-### GET
-
-```text
-GET /api/health
-```
-
-Purpose:
-
-Check whether the backend is running.
-
----
-
-# 7. Scheme APIs
-
-## Get all schemes
-
-```text
-GET /api/schemes
-```
-
-Purpose:
-
-Return available government schemes.
-
----
-
-## Get scheme by ID
-
-```text
-GET /api/schemes/:id
-```
-
-Example:
-
-```text
-GET /api/schemes/29
-```
-
-Purpose:
-
-Return details of one scheme.
-
----
-
-# 8. Search APIs
-
-## Search schemes
-
-```text
-GET /api/search?q=student
-```
-
-Purpose:
-
-Search schemes using keywords.
-
-Example:
-
-```text
-GET /api/search?q=student
-```
-
-The backend can use PostgreSQL full-text search and keyword matching.
-
----
-
-## Search suggestions
-
-```text
-GET /api/search/suggestions?q=student
-```
-
-Purpose:
-
-Provide search suggestions/autocomplete.
-
----
-
-# 9. Category APIs
-
-## Get categories
-
-```text
-GET /api/categories
-```
-
-## Get schemes by category
-
-```text
-GET /api/categories/:category
-```
-
-Example:
-
-```text
-GET /api/categories/Education
-```
-
----
-
-# 10. Department APIs
-
-## Get departments
-
-```text
-GET /api/departments
-```
-
-## Get schemes by department
-
-```text
-GET /api/departments/:department
-```
-
----
-
-# 11. AI Chat API
-
-## Endpoint
-
-```text
-POST /api/ai/chat
-```
-
-### Request
-
-```json
-{
-  "message": "I am a student from Bihar. Which schemes are suitable for me?"
-}
-```
-
-The AI flow is:
-
-```text
-User question
-    ↓
-ai.controller
-    ↓
-ai.service
-    ↓
-ai.repository.searchSchemes()
-    ↓
+``` text
+GET /api/schemes/random
+      ↓
+Scheme Controller
+      ↓
+Scheme Service
+      ↓
+Scheme Repository
+      ↓
 PostgreSQL
-    ↓
-Top matching schemes
-    ↓
-Gemini
-    ↓
-Natural-language response
+      ↓
+Random scheme rows
 ```
 
-The AI should not invent schemes.
+If the controller gives
+`ReferenceError: schemeRepository is not defined`, import it in the
+controller:
 
-It receives database results as context and is instructed to answer using those results.
+``` js
+const schemeRepository = require("../repositories/scheme.repository");
+```
 
----
+## 8. Statistics API {#8-statistics-api}
 
-# 12. Natural Language Search
+``` text
+GET /api/stats
+```
 
-The system should understand queries such as:
+Uses aggregate queries against existing tables. No statistics table is
+required.
 
-```text
+Typical metrics:
+
+``` text
+totalSchemes
+totalCategories
+totalDepartments
+totalEligibilityRules
+```
+
+Conceptual flow:
+
+``` text
+GET /api/stats
+      ↓
+Stats Controller
+      ↓
+Stats Service
+      ↓
+Stats Repository
+      ↓
+PostgreSQL COUNT queries
+      ↓
+Statistics response
+```
+
+## 9. States API --- Next {#9-states-api--next}
+
+``` text
+GET /api/states
+```
+
+Because states already exist in `schemes.state`, a POST `/api/states` is
+not required.
+
+Recommended query:
+
+``` sql
+SELECT DISTINCT state
+FROM schemes
+WHERE state IS NOT NULL
+  AND TRIM(state) <> ''
+ORDER BY state;
+```
+
+Only create a separate states table and POST/PUT/DELETE APIs if states
+later become independently managed master data.
+
+## 10. AI / Natural Language Search {#10-ai--natural-language-search}
+
+The system should understand:
+
+``` text
 I am a student from Bihar
-```
-
-and:
-
-```text
 I am a postgraduate student from Bihar
+I am a 22-year-old female student from Bihar, General category
+Which schemes are suitable for me?
 ```
 
-and:
+Example interpretation:
 
-```text
-I am a 22-year-old female student from Bihar, General category. Which schemes am I eligible for?
-```
-
-The important concept is:
-
-```text
-Normal user language
-        ↓
-Extract intent/important attributes
-        ↓
-Search schemes
-        ↓
-Return relevant schemes
-```
-
-For example:
-
-```text
+``` text
 "I am a student from Bihar"
-```
 
-should be interpreted approximately as:
-
-```text
 state = Bihar
+student intent = true
 occupation = Student
-education/student intent = true
 ```
 
----
+Flow:
 
-# 13. Recommendation API
+``` text
+Normal language
+      ↓
+Intent / important attributes
+      ↓
+PostgreSQL retrieval
+      ↓
+Relevant schemes
+      ↓
+Gemini
+      ↓
+Answer grounded in database context
+```
 
-Current endpoint:
+## 11. Recommendation API {#11-recommendation-api}
 
-```text
+``` text
 POST /api/recommendations
 ```
 
-Purpose:
-
-Return schemes that are relevant to the user's profile/requirements.
-
-Recommended flow:
-
-```text
+``` text
 User profile
-   ↓
+    ↓
 Recommendation API
-   ↓
+    ↓
 Relevant schemes
-   ↓
-User selects a scheme
-   ↓
+    ↓
+User selects scheme
+    ↓
 Eligibility API
 ```
 
-The recommendation step should not be treated as final eligibility.
+Recommendation asks:
 
-It answers:
+> Which schemes may suit me?
 
-> "Which schemes may be relevant to me?"
+Eligibility asks:
 
-Eligibility answers:
+> Am I actually eligible?
 
-> "Am I actually eligible for this selected scheme?"
+## 12. Eligibility API {#12-eligibility-api}
 
----
+Request:
 
-# 14. Eligibility API
-
-## Endpoint
-
-```text
-POST /api/eligibility
-```
-
-### Request example
-
-```json
+``` json
 {
   "schemeId": 1,
   "age": 22,
@@ -690,45 +468,9 @@ POST /api/eligibility
 }
 ```
 
----
+Eligible response:
 
-## Eligibility processing
-
-```text
-POST /api/eligibility
-        ↓
-eligibility.controller.js
-        ↓
-eligibility.service.js
-        ↓
-eligibility.repository.js
-        ↓
-eligibility_rules
-        ↓
-Compare every criterion
-        ↓
-eligible = true / false
-        ↓
-reasons[]
-```
-
-The current service checks:
-
-- Age
-- Gender
-- State
-- Occupation
-- Income
-- Caste
-- Disability
-
----
-
-## Eligible response
-
-Example:
-
-```json
+``` json
 {
   "success": true,
   "data": {
@@ -740,13 +482,9 @@ Example:
 }
 ```
 
----
+Not eligible response:
 
-## Not eligible response
-
-Example:
-
-```json
+``` json
 {
   "success": true,
   "data": {
@@ -762,65 +500,26 @@ Example:
 }
 ```
 
-The backend correctly returns multiple failed criteria rather than stopping after the first failure.
+The current implementation checks all criteria and returns multiple
+failed reasons.
 
----
+## 13. Application API {#13-application-api}
 
-# 15. Application Information API
-
-## Endpoint
-
-```text
+``` text
 GET /api/schemes/:id/application
 ```
 
-Example:
+Reads:
 
-```text
-GET /api/schemes/1/application
+``` text
+scheme_content.application_process
+scheme_content.documents_required
+scheme_content.official_source
 ```
 
-The application endpoint reads existing application information from:
+Possible official source fields:
 
-```text
-scheme_content
-```
-
-It does not require a new application database table at this stage.
-
----
-
-## Application flow
-
-```text
-User is eligible
-       ↓
-Show scheme information
-       ↓
-GET /api/schemes/:id/application
-       ↓
-scheme_content
-       ↓
-Application process
-       ↓
-Required documents
-       ↓
-Official source
-       ↓
-Apply Now
-```
-
-The response can expose:
-
-```text
-application_process
-documents_required
-official_source
-```
-
-The `official_source` JSON currently contains fields such as:
-
-```text
+``` text
 email
 website
 helpline
@@ -829,257 +528,71 @@ status_link
 download_link
 ```
 
----
+Flow:
 
-# 16. Complete User Journey
+``` text
+Eligible
+   ↓
+Scheme details
+   ↓
+Application process
+   ↓
+Required documents
+   ↓
+Official portal
+   ↓
+Apply Now
+```
 
-This is the complete backend product flow:
+## 14. Complete End-to-End Flow {#14-complete-end-to-end-flow}
 
-```text
+``` text
                          USER
                            |
                            v
               "I am a student from Bihar"
                            |
-                           v
-                   AI / SEARCH
-                           |
-              +------------+------------+
-              |                         |
-              v                         v
-        /api/ai/chat              /api/search
-              |                         |
-              +------------+------------+
+                 +---------+---------+
+                 |                   |
+                 v                   v
+           /api/ai/chat        /api/search
+                 |                   |
+                 +---------+---------+
                            |
                            v
-                  Relevant Schemes
+                    Relevant schemes
                            |
                            v
-                /api/recommendations
+                 /api/recommendations
                            |
                            v
-                 Recommended Schemes
+                    User selects scheme
                            |
                            v
-                  USER SELECTS SCHEME
+                   /api/eligibility
                            |
                            v
-                 /api/eligibility
+                   eligibility_rules
                            |
-                           v
-                 eligibility_rules
-                           |
-              +------------+------------+
-              |                         |
-              v                         v
-          ELIGIBLE                 NOT ELIGIBLE
-              |                         |
-              v                         v
-      Show success message        Show reasons
-              |                         |
-              v                         v
-      Application information     Explore other schemes
-              |
-              v
- GET /api/schemes/:id/application
-              |
-              v
-        scheme_content
-              |
-       +------+------+------+
-       |      |      |      |
-       v      v      v      v
-     Steps  Docs   Apply  Status
+                +----------+----------+
+                |                     |
+                v                     v
+            ELIGIBLE             NOT ELIGIBLE
+                |                     |
+                v                     v
+        Application API          Show reasons
+                |
+                v
+          scheme_content
+                |
+        +-------+-------+--------+
+        |               |        |
+       Steps           Docs    Official links
 ```
 
----
+## 15. Middleware
 
-# 17. Postman Testing Order
-
-When testing the backend, use this order.
-
-### Step 1 — Health
-
-```text
-GET /api/health
-```
-
-Expected:
-
-```text
-200 OK
-```
-
----
-
-### Step 2 — Get schemes
-
-```text
-GET /api/schemes
-```
-
----
-
-### Step 3 — Search
-
-```text
-GET /api/search?q=student
-```
-
----
-
-### Step 4 — AI
-
-```text
-POST /api/ai/chat
-```
-
-Body:
-
-```json
-{
-  "message": "I am a student from Bihar. Which schemes are suitable for me?"
-}
-```
-
----
-
-### Step 5 — Recommendation
-
-```text
-POST /api/recommendations
-```
-
-Use the request body expected by the current recommendation controller.
-
----
-
-### Step 6 — Eligibility
-
-```text
-POST /api/eligibility
-```
-
-Example:
-
-```json
-{
-  "schemeId": 1,
-  "age": 22,
-  "gender": "Female",
-  "state": "Bihar",
-  "occupation": "Student",
-  "income": 200000,
-  "caste": "General",
-  "disability": false
-}
-```
-
----
-
-### Step 7 — Application information
-
-Only after selecting a scheme:
-
-```text
-GET /api/schemes/1/application
-```
-
----
-
-# 18. PostgreSQL Useful Commands
-
-Connect to the database:
-
-```bash
-psql -U postgres -d hamara_adhikar
-```
-
-If peer authentication blocks the command, connect using the PostgreSQL role/configuration already used by your project instead of creating another database unnecessarily.
-
-List tables:
-
-```sql
-\dt
-```
-
-Check scheme structure:
-
-```sql
-\d schemes
-```
-
-Check scheme content:
-
-```sql
-\d scheme_content
-```
-
-Check eligibility rules:
-
-```sql
-\d eligibility_rules
-```
-
-View eligibility rules:
-
-```sql
-SELECT * FROM eligibility_rules;
-```
-
-View schemes:
-
-```sql
-SELECT * FROM schemes;
-```
-
-View application information:
-
-```sql
-SELECT
-    scheme_id,
-    application_process,
-    documents_required,
-    official_source
-FROM scheme_content;
-```
-
----
-
-# 19. Running the Backend
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Start development server:
-
-```bash
-npm run dev
-```
-
-Expected:
-
-```text
-PostgreSQL connected successfully
-Server running on port 5000
-```
-
-Backend:
-
-```text
-http://localhost:5000
-```
-
----
-
-# 20. Middleware
-
-The backend uses middleware for validation, rate limiting, 404 handling, and centralized error handling.
-
-Current structure:
+The middleware layer is implemented and is part of the active backend architecture.
 
 ```text
 src/middleware/
@@ -1089,330 +602,276 @@ src/middleware/
 └── validate.middleware.js
 ```
 
-## 20.1 `validate.middleware.js`
-
-Validates request data before it reaches the controller.
+### Middleware responsibilities
 
 ```text
-Request
-  ↓
-Validation
-  ↓
-Valid?
-  ├── No  → 400 Bad Request
-  └── Yes → Controller
-```
-
-Use it for endpoints such as:
-
-```text
-POST /api/ai/chat
-POST /api/recommendations
-POST /api/eligibility
-```
-
-Important fields to validate include `message`, `schemeId`, `age`, `gender`, `state`, `occupation`, `income`, `caste`, and `disability`. Validation keeps invalid data out of the service and repository layers.
-
----
-
-## 20.2 `notFound.middleware.js`
-
-Handles requests for routes that do not exist.
-
-Example:
-
-```text
-GET /api/unknown
-```
-
-Recommended response:
-
-```json
-{
-  "success": false,
-  "message": "Route not found"
-}
-```
-
-Register this middleware after all valid API routes.
-
----
-
-## 20.3 `rateLimit.middleware.js`
-
-Protects public endpoints from excessive repeated requests. It is especially useful for:
-
-```text
-POST /api/ai/chat
-POST /api/recommendations
-POST /api/eligibility
-```
-
-Flow:
-
-```text
-Request
-  ↓
-Rate limiter
-  ↓
-Within allowed limit?
-  ├── Yes → Continue
-  └── No  → 429 Too Many Requests
-```
-
-Keep rate-limit configuration centralized instead of duplicating limits inside controllers.
-
----
-
-## 20.4 `error.middleware.js`
-
-Provides centralized handling for unexpected errors.
-
-Flow:
-
-```text
-Route
-  ↓
-Controller
-  ↓
-Service
-  ↓
-Repository
-  ↓
-Error
-  ↓
 error.middleware.js
-  ↓
-Standard JSON response
+    ↓
+Centralized application/runtime error handling
+
+notFound.middleware.js
+    ↓
+Handles requests for routes that do not exist
+
+rateLimit.middleware.js
+    ↓
+Limits repeated requests
+
+validate.middleware.js
+    ↓
+Runs request validation before controller logic
 ```
 
-Recommended response format:
-
-```json
-{
-  "success": false,
-  "message": "Something went wrong"
-}
-```
-
-The actual error can be logged on the server during development. Production responses should not expose stack traces, SQL queries, API keys, or other internal details.
-
----
-
-## 20.5 Middleware Order in `app.js`
-
-Middleware order is important. The recommended high-level order is:
+Recommended Express order:
 
 ```text
-1. Express/configuration
-2. CORS/security middleware
-3. JSON body parser
+1. Express/config
+2. CORS/security
+3. JSON parser
 4. Rate limiter
 5. API routes
 6. notFound middleware
 7. error middleware
 ```
 
-Conceptually:
+The middleware layer should remain separate from business logic. Controllers should receive validated input and focus on request/response handling.
 
-```js
-app.use(express.json());
+---
 
-app.use(rateLimiter);
+## 16. Validators
 
-app.use("/api/health", healthRoutes);
-app.use("/api/schemes", schemeRoutes);
-app.use("/api/search", searchRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/departments", departmentRoutes);
-app.use("/api/recommendations", recommendationRoutes);
-app.use("/api/eligibility", eligibilityRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/schemes", applicationRoutes);
-
-app.use(notFound);
-app.use(errorHandler);
-```
-
-For request validation, apply the appropriate validator to the specific route:
+The validator layer is also implemented.
 
 ```text
+src/validators/
+├── ai.validator.js
+├── eligibility.validator.js
+└── recommendation.validator.js
+```
+
+### Validator responsibilities
+
+```text
+ai.validator.js
+    ↓
+Validates POST /api/ai/chat
+
+eligibility.validator.js
+    ↓
+Validates POST /api/eligibility
+
+recommendation.validator.js
+    ↓
+Validates POST /api/recommendations
+```
+
+### Validation flow
+
+```text
+Client Request
+      ↓
+Route
+      ↓
+Validator
+      ↓
+validate.middleware.js
+      ↓
+Controller
+      ↓
+Service
+      ↓
+Repository
+      ↓
+PostgreSQL
+```
+
+Important POST endpoints covered by validation:
+
+```text
+POST /api/ai/chat
+POST /api/recommendations
 POST /api/eligibility
-        ↓
-validate
-        ↓
-eligibilityController
 ```
 
-Do not use one unrelated validation schema for every endpoint.
+This prevents invalid request data from unnecessarily reaching the service and repository layers.
 
 ---
 
-# 20. Environment Variables
+## 17. Current Backend Folder Structure
 
-Keep secrets in `.env`.
-
-Example structure:
-
-```env
-PORT=5000
-
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=hamara_adhikar
-DB_USER=postgres
-DB_PASSWORD=your_password
-
-GEMINI_API_KEY=your_gemini_api_key
-```
-
-Do not commit real API keys or database passwords.
-
-`.env` should remain in `.gitignore`.
-
----
-
-# 21. Error Handling
-
-Common errors:
-
-### Eligibility rules not found
-
-```json
-{
-  "success": false,
-  "message": "Eligibility rules not found"
-}
-```
-
-Check:
-
-```sql
-SELECT * FROM eligibility_rules
-WHERE scheme_id = 1;
-```
-
-There must be an eligibility rule for the selected scheme.
-
----
-
-### Scheme not found
-
-Verify:
-
-```sql
-SELECT *
-FROM schemes
-WHERE id = 1;
-```
-
----
-
-### Application data missing
-
-Check:
-
-```sql
-SELECT *
-FROM scheme_content
-WHERE scheme_id = 1;
-```
-
-Make sure the application-related JSONB fields contain data.
-
----
-
-# 22. Important Design Decision
-
-The backend currently separates:
-
-### Scheme discovery
+The current backend follows a layered architecture:
 
 ```text
-schemes
-scheme_content
-search
-AI
-recommendations
+src/
+├── config/
+│   ├── db.js
+│   └── env.js
+│
+├── controllers/
+│   ├── ai.controller.js
+│   ├── application.controller.js
+│   ├── category.controller.js
+│   ├── department.controller.js
+│   ├── eligibility.controller.js
+│   ├── health.controller.js
+│   ├── recommendation.controller.js
+│   ├── scheme.controller.js
+│   └── search.controller.js
+│
+├── middleware/
+│   ├── error.middleware.js
+│   ├── notFound.middleware.js
+│   ├── rateLimit.middleware.js
+│   └── validate.middleware.js
+│
+├── repositories/
+│   ├── ai.repository.js
+│   ├── application.repository.js
+│   ├── category.repository.js
+│   ├── department.repository.js
+│   ├── eligibility.repository.js
+│   ├── recommendation.repository.js
+│   ├── scheme.repository.js
+│   └── search.repository.js
+│
+├── routes/
+│   ├── ai.routes.js
+│   ├── application.routes.js
+│   ├── category.routes.js
+│   ├── department.routes.js
+│   ├── eligibility.routes.js
+│   ├── health.routes.js
+│   ├── recommendation.routes.js
+│   ├── scheme.routes.js
+│   ├── search.routes.js
+│   └── stats.routes.js
+│
+├── services/
+│   ├── ai.service.js
+│   ├── category.service.js
+│   ├── department.service.js
+│   ├── eligibility.service.js
+│   ├── health.service.js
+│   ├── query.service.js
+│   ├── recommendation.service.js
+│   ├── scheme.service.js
+│   └── search.service.js
+│
+├── validators/
+│   ├── ai.validator.js
+│   ├── eligibility.validator.js
+│   └── recommendation.validator.js
+│
+├── app.js
+├── server.js
+├── test-ai.js
+└── test-search.js
 ```
 
-from:
-
-### Eligibility calculation
+### Layer responsibility
 
 ```text
-eligibility_rules
-eligibility service
+Routes
+  ↓
+Middleware / Validation
+  ↓
+Controllers
+  ↓
+Services
+  ↓
+Repositories
+  ↓
+PostgreSQL
 ```
 
-and:
+## 18. PostgreSQL Commands {#16-postgresql-commands}
 
-### Application guidance
-
-```text
-scheme_content
-application API
+``` bash
+psql -U postgres -d hamara_adhikar
 ```
 
-This is a good separation because each table has a clear responsibility.
+``` sql
+\dt
+\d schemes
+\d scheme_content
+\d eligibility_rules
 
----
+SELECT * FROM schemes;
+SELECT * FROM eligibility_rules;
 
-# 23. What Happens After Eligibility?
-
-If the user is eligible:
-
-```text
-Eligible
-   ↓
-Show scheme details
-   ↓
-Show benefits
-   ↓
-Show application process
-   ↓
-Show required documents
-   ↓
-Show official portal
-   ↓
-Apply Now
+SELECT
+    scheme_id,
+    application_process,
+    documents_required,
+    official_source
+FROM scheme_content;
 ```
 
-If the user is not eligible:
+## 19. Running {#17-running}
 
-```text
-Not Eligible
-   ↓
-Show exact reasons
-   ↓
-Explain failed criteria
-   ↓
-Suggest exploring other schemes
-   ↓
-User can select another scheme
-   ↓
-Run eligibility again
+``` bash
+npm install
+npm run dev
 ```
 
----
+Expected:
 
-# 24. Current Backend Completion Status
+``` text
+PostgreSQL connected successfully
+Server running on port 5000
+```
 
-Based on the current implementation:
+Local backend:
 
-```text
+``` text
+http://localhost:5000
+```
+
+## 20. Postman Testing Order {#18-postman-testing-order}
+
+``` text
+1. GET  /api/health
+2. GET  /api/schemes
+3. GET  /api/schemes/:id
+4. GET  /api/schemes/random
+5. GET  /api/search?q=student
+6. POST /api/ai/chat
+7. POST /api/recommendations
+8. POST /api/eligibility
+9. GET  /api/schemes/:id/application
+10. GET /api/stats
+11. GET /api/states
+```
+
+For eligibility test both valid and invalid users.
+
+## 21. Current Completion Status {#19-current-completion-status}
+
+``` text
 [✓] PostgreSQL connection
-[✓] Schemes API
-[✓] Scheme details API
-[✓] Category APIs
-[✓] Department APIs
-[✓] Search API
-[✓] Search suggestions
-[✓] AI chat
-[✓] PostgreSQL-based AI scheme retrieval
-[✓] Natural-language student/Bihar search handling
-[✓] Recommendation endpoint
-[✓] eligibility_rules table
+[✓] GET /api/health
+
+[✓] GET /api/schemes
+[✓] GET /api/schemes/:id
+[✓] GET /api/schemes/code/:code
+[✓] GET /api/schemes/random
+
+[✓] GET /api/categories
+[✓] GET /api/categories/:category
+
+[✓] GET /api/departments
+[✓] GET /api/departments/:department
+
+[✓] GET /api/search
+[✓] GET /api/search/suggestions
+
+[✓] POST /api/ai/chat
+[✓] PostgreSQL-based AI retrieval
+[✓] Natural-language student/Bihar handling
+
+[✓] POST /api/recommendations
+
+[✓] eligibility_rules
 [✓] Eligibility repository
 [✓] Eligibility service
 [✓] Eligibility controller
@@ -1420,177 +879,72 @@ Based on the current implementation:
 [✓] Eligible response
 [✓] Not eligible response
 [✓] Multiple eligibility reasons
+
 [✓] Application repository
 [✓] Application controller
-[✓] Application routes
+[✓] Application route
 [✓] GET /api/schemes/:id/application
-[✓] Application process data
-[✓] Required documents data
-[✓] Official source data
+[✓] Application process
+[✓] Required documents
+[✓] Official source
+
+[✓] GET /api/stats
+
+[✓] Validation middleware
+[✓] Rate limiting middleware
+[✓] 404 middleware
+[✓] Centralized error handling
+
+[ ] GET /api/states
 ```
 
----
+## 22. Recommended Next Development Phase {#20-recommended-next-development-phase}
 
-# 25. Recommended Next Development Phase
+Do not add unnecessary database tables.
 
-Do not immediately add more database tables.
+Next:
 
-The next priority should be **integration and production readiness**:
-
-### Phase 1 — Backend integration
-
-```text
-AI
- ↓
-Recommendation
- ↓
-Eligibility
- ↓
-Application information
+``` text
+1. Implement GET /api/states
+2. Integrate frontend with all current APIs
+3. Add/verify request validation
+4. Test complete AI → recommendation → eligibility → application flow
+5. Test error cases
+6. Add production security checks
+7. Document API response contracts
 ```
 
-Make sure the IDs and response formats connect correctly.
+The current database is already sufficient for the core product:
 
-### Phase 2 — Validation
-
-Add validation for:
-
-```text
-schemeId
-age
-gender
-state
-occupation
-income
-caste
-disability
-```
-
-### Phase 3 — Error handling
-
-Standardize:
-
-```json
-{
-  "success": false,
-  "message": "Readable error message"
-}
-```
-
-### Phase 4 — Security
-
-Add:
-
-```text
-Input validation
-Rate limiting
-CORS configuration
-Environment secrets
-SQL parameterization
-Request size limits
-```
-
-### Phase 5 — Testing
-
-Test:
-
-```text
-Valid eligibility
-Invalid eligibility
-Missing eligibility rule
-Invalid scheme ID
-Missing application information
-Empty search
-AI with normal language
-AI with irrelevant questions
-```
-
-### Phase 6 — Frontend integration
-
-Frontend should consume:
-
-```text
-/api/ai/chat
-/api/recommendations
-/api/eligibility
-/api/schemes/:id/application
-```
-
----
-
-# 26. Final Architecture
-
-The final backend concept is:
-
-```text
-                    HAMARA ADHIKAR
-                           |
-                           v
-                    User Question
-                           |
-             +-------------+-------------+
-             |                           |
-             v                           v
-         Search                       AI Chat
-             |                           |
-             +-------------+-------------+
-                           |
-                           v
-                    Scheme Results
-                           |
-                           v
-                    Recommendations
-                           |
-                           v
-                    User Selects
-                       Scheme
-                           |
-                           v
-                    Eligibility API
-                           |
-                    eligibility_rules
-                           |
-             +-------------+-------------+
-             |                           |
-             v                           v
-          Eligible                  Not Eligible
-             |                           |
-             v                           v
-      Application API             Reasons shown
-             |
-             v
-       scheme_content
-             |
-      +------+------+------+
-      |      |      |      |
-      v      v      v      v
-    Steps  Docs  Apply   Status
-```
-
----
-
-## Backend principle
-
-Keep the system simple:
-
-```text
+``` text
 schemes
-    = scheme identity/basic information
+    = scheme identity
 
 scheme_content
     = detailed scheme + application information
 
 eligibility_rules
-    = eligibility logic/data
+    = eligibility logic
 
 AI/Search
-    = find relevant schemes
+    = scheme discovery
+
+Recommendation API
+    = relevant scheme recommendation
 
 Eligibility API
-    = calculate eligibility
+    = actual eligibility calculation
 
 Application API
-    = tell the user how to apply
+    = application guidance
+
+Random API
+    = random scheme discovery
+
+Stats API
+    = aggregate database metrics
 ```
 
-Avoid creating a new table unless the product actually needs to **persist new information**. For example, an `eligibility_reports` table is unnecessary for the current stateless eligibility-check flow.
+Avoid creating a new table unless the product needs to persist new
+information such as user accounts, eligibility history, saved schemes,
+application tracking, analytics or audit history.
