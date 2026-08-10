@@ -1,4 +1,6 @@
 const schemeService = require("../services/scheme.service");
+const schemeRepository = require("../repositories/scheme.repository");
+
 
 const getAllSchemes = async (req, res) => {
   try {
@@ -43,7 +45,49 @@ const getSchemeById = async (req, res) => {
   }
 };
 
+const getRandomSchemes = async (req, res, next) => {
+
+  try {
+
+    const schemes =
+      await schemeRepository.getRandomSchemes();
+
+    res.status(200).json({
+      success: true,
+      data: schemes
+    });
+
+  } catch (error) {
+
+    next(error);
+
+  }
+
+};
+
+const getStats = async (req, res, next) => {
+
+    try {
+
+        const stats =
+            await schemeRepository.getStats();
+
+        res.status(200).json({
+            success: true,
+            data: stats
+        });
+
+    } catch (error) {
+
+        next(error);
+
+    }
+
+};
+
 module.exports = {
   getAllSchemes,
   getSchemeById,
+  getRandomSchemes,
+  getStats
 };

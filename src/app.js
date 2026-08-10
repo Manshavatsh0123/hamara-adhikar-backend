@@ -16,6 +16,7 @@ const eligibilityRoutes = require("./routes/eligibility.routes");
 const recommendationRoutes = require("./routes/recommendation.routes");
 const aiRoutes = require("./routes/ai.routes");
 const applicationRoutes = require("./routes/application.routes");
+const statsRoutes = require("./routes/stats.routes");
 
 
 const app = express();
@@ -53,6 +54,8 @@ app.use("/api/eligibility", eligibilityRoutes);
 app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api", applicationRoutes);
+
+app.use("/api/stats", statsRoutes);
 
 
 // 404 HANDLER

@@ -33,8 +33,31 @@ const findByCategory = async (category) => {
   return result.rows;
 };
 
+const getStats = async () => {
+
+    const result = await pool.query(`
+        SELECT
+            (SELECT COUNT(*) FROM schemes)::INTEGER AS "totalSchemes",
+
+            (SELECT COUNT(DISTINCT state)
+             FROM schemes
+             WHERE state IS NOT NULL)::INTEGER AS "totalStates",
+
+            (SELECT COUNT(DISTINCT department)
+             FROM schemes
+             WHERE department IS NOT NULL)::INTEGER AS "totalDepartments",
+
+            (SELECT COUNT(DISTINCT category_id)
+             FROM scheme_categories
+             WHERE category_id IS NOT NULL)::INTEGER AS "totalCategories";
+    `);
+
+    return result.rows[0];
+};
+
 
 module.exports = {
   findAll,
-  findByCategory
+  findByCategory,
+  getStats
 };
