@@ -3,10 +3,30 @@ const env = require("./env");
 
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === "production"
-    ? { rejectUnauthorized: false }
-    : false,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
+
+const connectDB = async () => {
+  try {
+    const client = await pool.connect();
+
+    console.log("PostgreSQL connected successfully");
+
+    client.release();
+  } catch (error) {
+    console.error("PostgreSQL connection failed");
+    console.error(error.message);
+
+    process.exit(1);
+  }
+};
+
+module.exports = {
+  pool,
+  connectDB,
+};
 
 // const { Pool } = require("pg");
 // const env = require("./env");
