@@ -2,30 +2,40 @@ const { Pool } = require("pg");
 const env = require("./env");
 
 const pool = new Pool({
-  host: env.DB_HOST,
-  port: env.DB_PORT,
-  user: env.DB_USER,
-  password: env.DB_PASSWORD,
-  database: env.DB_NAME,
+  connectionString: env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === "production"
+    ? { rejectUnauthorized: false }
+    : false,
 });
 
-// Function to verify database connection
-const connectDB = async () => {
-  try {
-    const client = await pool.connect();
+// const { Pool } = require("pg");
+// const env = require("./env");
 
-    console.log("PostgreSQL connected successfully");
+// const pool = new Pool({
+//   host: env.DB_HOST,
+//   port: env.DB_PORT,
+//   user: env.DB_USER,
+//   password: env.DB_PASSWORD,
+//   database: env.DB_NAME,
+// });
 
-    client.release();
-  } catch (error) {
-    console.error("PostgreSQL connection failed");
-    console.error(error.message);
+// // Function to verify database connection
+// const connectDB = async () => {
+//   try {
+//     const client = await pool.connect();
 
-    process.exit(1);
-  }
-};
+//     console.log("PostgreSQL connected successfully");
 
-module.exports = {
-  pool,
-  connectDB,
-};
+//     client.release();
+//   } catch (error) {
+//     console.error("PostgreSQL connection failed");
+//     console.error(error.message);
+
+//     process.exit(1);
+//   }
+// };
+
+// module.exports = {
+//   pool,
+//   connectDB,
+// };
